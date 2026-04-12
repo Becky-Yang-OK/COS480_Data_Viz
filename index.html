@@ -272,11 +272,13 @@ let VIEWS = {};
 let HEATMAP_DATA = [];
 const tip = document.getElementById('tooltip');
 
+
 Promise.all([
   d3.csv('patients.csv'),
   d3.csv('conditions.csv'),
-  d3.csv('encounters.csv'),
-]).then(([patients, conditions, encounters]) => {
+  d3.csv('https://github.com/Becky-Yang-OK/COS480_Data_Viz/releases/download/Data2/encounters.csv'),
+  d3.csv('https://github.com/Becky-Yang-OK/COS480_Data_Viz/releases/download/Data/observations.csv')
+]).then(([patients, conditions, encounters, observations]) => {
 
   const covidIds = new Set(
     conditions
