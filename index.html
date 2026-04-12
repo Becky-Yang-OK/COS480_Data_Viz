@@ -270,6 +270,7 @@ const SEVERITY_RANK = {
 
 let VIEWS = {};
 let HEATMAP_DATA = [];
+
 const tip = document.getElementById('tooltip');
 
 
@@ -407,6 +408,7 @@ Promise.all([
   });
 
   // Summary stats
+  const totalCovid = allCovid.length;
   const totalFatal = died.size;
   const totalHosp  = allCovid.filter(id => (patientSeverity.get(id) ?? 0) >= 4).length;
   document.getElementById('stat-total').textContent = totalCovid.toLocaleString();
