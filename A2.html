@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COVID-19 Severity Factors</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0d0f14;
+    color: #e8e6e0;
+    min-height: 100vh;
+    padding: 48px 32px;
+  }
+
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+    color: #8a8e9a;
+    font-size: 13px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid #1e2230;
+    border-top-color: #5a8fa8;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #app { display: none; }
+
+  header { max-width: 960px; margin: 0 auto 48px; }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #5a8fa8;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 48px);
+    line-height: 1.1;
+    color: #f0ede6;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    font-weight: 300;
+    color: #8a8880;
+    line-height: 1.6;
+    max-width: 560px;
+  }
+
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: #161920;
+    border: 1px solid #1e2230;
+    border-radius: 10px;
+    padding: 16px 20px;
+    min-width: 120px;
+  }
+
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: #5a8fa8;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: #9a9890;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    max-width: 960px;
+    margin: 0 auto 32px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1px solid #2a2e3a;
+    background: transparent;
+    color: #9a9890;
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .tab:hover { border-color: #5a8fa8; color: #5a8fa8; }
+  .tab.active { background: #5a8fa8; border-color: #5a8fa8; color: #0d0f14; }
+
+  .chart-container { max-width: 960px; margin: 0 auto; }
+
+  .chart-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #3a3e4a;
+    margin-bottom: 20px;
+  }
+
+  svg { display: block; width: 100%; overflow: visible; }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #b0ada8;
+  }
+
+  .legend-swatch {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: #1a1d26;
+    border: 1px solid #2a2e3a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #e8e6e0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    line-height: 1.8;
+    z-index: 100;
+  }
+
+  .tooltip strong { color: #5a8fa8; }
+
+  .insight-box {
+    max-width: 960px;
+    margin: 28px auto 0;
+    background: #161920;
+    border: 1px solid #1e2230;
+    border-left: 3px solid #5a8fa8;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #6a6865;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 600px) { body { padding: 32px 16px; } }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Loading patient data…</span>
+</div>
+
+<div id="app">
+  <header>
+    <div class="eyebrow">Data Visualization · Synthea Synthetic Patient Data</div>
+    <h1>What factors lead to<br>severe COVID-19 outcomes?</h1>
+    <p class="subtitle">Analysis of synthetic patients diagnosed with COVID-19, examining how pre-existing conditions, age, and comorbidity burden shift outcomes from mild illness toward hospitalization and death.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">COVID patients</div></div>
+      <div class="stat"><div class="stat-num" id="stat-fatal">—</div><div class="stat-label">Fatalities</div></div>
+      <div class="stat"><div class="stat-num" id="stat-hosp">—</div><div class="stat-label">Hospitalized</div></div>
+      <div class="stat"><div class="stat-num" id="stat-age">21×</div><div class="stat-label">Higher mortality, 75+ vs under 50</div></div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="show('factors', this)">By Risk Factor</button>
+    <button class="tab" onclick="show('age', this)">By Age Group</button>
+    <button class="tab" onclick="show('count', this)">By Comorbidity Count</button>
+    <button class="tab" onclick="show('heatmap', this)">Condition × Age Heatmap</button>
+  </div>
+
+  <div class="chart-container">
+    <div id="bar-legend" class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#3d7ab5"></span>Mild / Outpatient</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#c87d2f"></span>Emergency</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#b83a3a"></span>Inpatient</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#5c1a1a"></span>Fatal</span>
+    </div>
+    <div id="heat-legend" style="display:none;margin-bottom:28px">
+      <div style="font-size:12px;color:#6a6865;margin-bottom:8px">Severe Outcome Rate (Inpatient + Fatal)</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:#3a3e4a">0%</span>
+        <div id="heat-gradient" style="height:12px;width:200px;border-radius:3px"></div>
+        <span style="font-size:11px;color:#3a3e4a">100%</span>
+      </div>
+    </div>
+    <div class="chart-title" id="chart-title"></div>
+    <svg id="chart"></svg>
+    <div class="insight-box" id="insight"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const COLORS = { mild:'#3d7ab5', emerg:'#c87d2f', inp:'#b83a3a', fatal:'#5c1a1a' };
+const LABELS = { mild:'Mild / Outpatient', emerg:'Emergency', inp:'Inpatient', fatal:'Fatal' };
+const SEGS = ['mild','emerg','inp','fatal'];
+
+const COMORBIDITY_CODES = {
+  'Hypertension':     ['59621000','38341003'],
+  'Diabetes':         ['44054006','73211009','314994000'],
+  'Obesity':          ['414916001','162864005'],
+  'COPD':             ['13645005','185086009'],
+  'Coronary disease': ['53741008','414545008'],
+  'Asthma':           ['195967001','233678006'],
+};
+
+const AGE_GROUPS = [
+  { l:'0–17',  lo:0,  hi:17  },
+  { l:'18–34', lo:18, hi:34  },
+  { l:'35–49', lo:35, hi:49  },
+  { l:'50–64', lo:50, hi:64  },
+  { l:'65–74', lo:65, hi:74  },
+  { l:'75+',   lo:75, hi:200 },
+];
+
+const SEVERITY_RANK = {
+  wellness:0, ambulatory:1, outpatient:1, urgentcare:2, emergency:3, inpatient:4
+};
+
+let VIEWS = {};
+let HEATMAP_DATA = [];
+const tip = document.getElementById('tooltip');
+
+Promise.all([
+  d3.csv('patients.csv'),
+  d3.csv('conditions.csv'),
+  d3.csv('encounters.csv'),
+]).then(([patients, conditions, encounters]) => {
+
+  const covidIds = new Set(
+    conditions
+      .filter(r => r.CODE === '840539006' || r.CODE === '840544004')
+      .map(r => r.PATIENT)
+  );
+
+  const patientMap = new Map(patients.map(p => [p.Id, p]));
+
+  const patientSeverity = new Map();
+  encounters.forEach(e => {
+    if (!covidIds.has(e.PATIENT)) return;
+    const rank = SEVERITY_RANK[e.ENCOUNTERCLASS?.toLowerCase()] ?? 0;
+    if (!patientSeverity.has(e.PATIENT) || rank > patientSeverity.get(e.PATIENT)) {
+      patientSeverity.set(e.PATIENT, rank);
+    }
+  });
+
+  const died = new Set(
+    [...covidIds].filter(id => patientMap.get(id)?.DEATHDATE?.trim())
+  );
+
+  const patientConds = new Map();
+  conditions.forEach(r => {
+    if (!covidIds.has(r.PATIENT)) return;
+    if (!patientConds.has(r.PATIENT)) patientConds.set(r.PATIENT, new Set());
+    patientConds.get(r.PATIENT).add(r.CODE);
+  });
+
+  function severityOf(id) {
+    if (died.has(id)) return 'fatal';
+    const rank = patientSeverity.get(id) ?? 0;
+    if (rank >= 4) return 'inp';
+    if (rank === 3) return 'emerg';
+    return 'mild';
+  }
+
+  function breakdown(ids) {
+    const counts = { mild:0, emerg:0, inp:0, fatal:0 };
+    ids.forEach(id => counts[severityOf(id)]++);
+    const n = ids.length;
+    if (n === 0) return { n:0, mild:0, emerg:0, inp:0, fatal:0 };
+    return {
+      n,
+      mild:  Math.round(counts.mild  / n * 100),
+      emerg: Math.round(counts.emerg / n * 100),
+      inp:   Math.round(counts.inp   / n * 100),
+      fatal: Math.round(counts.fatal / n * 100),
+    };
+  }
+
+  const covidDate = new Date('2020-03-01');
+  const allCovid = [...covidIds];
+
+  function ageOf(id) {
+    const p = patientMap.get(id);
+    if (!p?.BIRTHDATE) return null;
+    return (covidDate - new Date(p.BIRTHDATE)) / (365.25 * 24 * 3600 * 1000);
+  }
+
+  // ── View 1: By risk factor ─────────────────────────────────────────────
+  const factorRows = [];
+  const noneIds = allCovid.filter(id =>
+    !Object.values(COMORBIDITY_CODES).some(codes =>
+      codes.some(c => patientConds.get(id)?.has(c))
+    )
+  );
+  factorRows.push({ l:'No comorbidities', ...breakdown(noneIds) });
+  Object.entries(COMORBIDITY_CODES).forEach(([name, codes]) => {
+    const ids = allCovid.filter(id => codes.some(c => patientConds.get(id)?.has(c)));
+    if (ids.length > 0) factorRows.push({ l: name, ...breakdown(ids) });
+  });
+  factorRows.sort((a, b) => (a.fatal + a.inp) - (b.fatal + b.inp));
+
+  // ── View 2: By age group ───────────────────────────────────────────────
+  const ageRows = AGE_GROUPS.map(grp => {
+    const ids = allCovid.filter(id => {
+      const age = ageOf(id);
+      return age !== null && age >= grp.lo && age <= grp.hi;
+    });
+    return { l: grp.l, ...breakdown(ids) };
+  }).filter(r => r.n > 0);
+
+  // ── View 3: By comorbidity count ───────────────────────────────────────
+  const countRows = [0,1,2,3,4].map(target => {
+    const ids = allCovid.filter(id => {
+      const n = Object.values(COMORBIDITY_CODES)
+        .filter(codes => codes.some(c => patientConds.get(id)?.has(c))).length;
+      return target < 4 ? n === target : n >= 4;
+    });
+    const label = target === 4 ? '4+ conditions' : `${target} condition${target===1?'':'s'}`;
+    return { l: label, ...breakdown(ids) };
+  }).filter(r => r.n > 0);
+
+  // ── View 4: Heatmap — condition × age group ────────────────────────────
+  const conditions_list = ['No comorbidities', ...Object.keys(COMORBIDITY_CODES)];
+  HEATMAP_DATA = [];
+
+  conditions_list.forEach(condName => {
+    AGE_GROUPS.forEach(grp => {
+      let ids;
+      if (condName === 'No comorbidities') {
+        ids = allCovid.filter(id => {
+          const age = ageOf(id);
+          if (age === null || age < grp.lo || age > grp.hi) return false;
+          return !Object.values(COMORBIDITY_CODES).some(codes =>
+            codes.some(c => patientConds.get(id)?.has(c))
+          );
+        });
+      } else {
+        const codes = COMORBIDITY_CODES[condName];
+        ids = allCovid.filter(id => {
+          const age = ageOf(id);
+          if (age === null || age < grp.lo || age > grp.hi) return false;
+          return codes.some(c => patientConds.get(id)?.has(c));
+        });
+      }
+      const n = ids.length;
+      const severeCount = ids.filter(id => {
+        const s = severityOf(id);
+        return s === 'inp' || s === 'fatal';
+      }).length;
+      const severeRate = n > 0 ? Math.round(severeCount / n * 100) : null;
+      HEATMAP_DATA.push({ cond: condName, age: grp.l, n, severeRate });
+    });
+  });
+
+  // Summary stats
+  const totalCovid = allCovid.length;
+  const totalFatal = died.size;
+  const totalHosp  = allCovid.filter(id => (patientSeverity.get(id) ?? 0) >= 4).length;
+  document.getElementById('stat-total').textContent = totalCovid.toLocaleString();
+  document.getElementById('stat-fatal').textContent = totalFatal.toLocaleString();
+  document.getElementById('stat-hosp').textContent  = Math.round(totalHosp / totalCovid * 100) + '%';
+
+  VIEWS = {
+    factors: {
+      title: 'Severity breakdown by risk factor',
+      insight: 'COPD and coronary heart disease are the deadliest comorbidities — patients with COPD had the highest inpatient and fatality rates. Asthma, despite being respiratory, showed mostly mild outcomes. Patients with no comorbidities had the lowest fatality rate.',
+      rows: factorRows,
+    },
+    age: {
+      title: 'Severity breakdown by age group at COVID diagnosis',
+      insight: 'Age is the single strongest predictor. Patients under 50 had near-zero fatality rates. Adults 75+ faced the highest mortality — and less than a third experienced mild illness. The shift from 50–64 to 65–74 is particularly sharp.',
+      rows: ageRows,
+    },
+    count: {
+      title: 'Severity breakdown by number of comorbidities',
+      insight: 'Risk compounds with each additional condition. Patients with 4+ conditions faced dramatically higher rates of hospitalization and death compared to those with none.',
+      rows: countRows,
+    },
+  };
+
+  // Build gradient for heatmap legend
+  const gradEl = document.getElementById('heat-gradient');
+  gradEl.style.background = 'linear-gradient(to right, #161920, #5a8fa8, #b83a3a, #5c1a1a)';
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  draw('factors');
+
+}).catch(err => {
+  document.getElementById('loading').innerHTML =
+    `<div style="color:#b83a3a;text-align:center;line-height:2">
+      Error loading CSV files.<br>
+      Make sure patients.csv, conditions.csv, and encounters.csv<br>
+      are in the same folder as A2.html<br>
+      and that you opened with Live Server, not by double-clicking.<br><br>
+      <code style="font-size:11px;color:#9a9890">${err.message}</code>
+    </div>`;
+});
+
+// ── Draw bar chart ─────────────────────────────────────────────────────────
+function drawBars(viewKey) {
+  const view = VIEWS[viewKey];
+  const rows = view.rows;
+  document.getElementById('chart-title').textContent = view.title;
+  document.getElementById('insight').textContent = view.insight;
+
+  const svg = d3.select('#chart');
+  svg.selectAll('*').remove();
+const defs = svg.append('defs');
+const diag = defs.append('pattern')
+  .attr('id','pat-emerg').attr('patternUnits','userSpaceOnUse')
+  .attr('width',6).attr('height',6).attr('patternTransform','rotate(45)');
+diag.append('rect').attr('width',6).attr('height',6).attr('fill','#c87d2f');
+diag.append('line').attr('x1',0).attr('y1',0).attr('x2',0).attr('y2',6)
+  .attr('stroke','#8a5010').attr('stroke-width',2);
+
+const cross = defs.append('pattern')
+  .attr('id','pat-inp').attr('patternUnits','userSpaceOnUse')
+  .attr('width',8).attr('height',8);
+cross.append('rect').attr('width',8).attr('height',8).attr('fill','#b83a3a');
+cross.append('line').attr('x1',0).attr('y1',0).attr('x2',8).attr('y2',8)
+  .attr('stroke','#7a1a1a').attr('stroke-width',1.5);
+cross.append('line').attr('x1',8).attr('y1',0).attr('x2',0).attr('y2',8)
+  .attr('stroke','#7a1a1a').attr('stroke-width',1.5);
+  const margin = { top:8, right:60, bottom:32, left:148 };
+  const rowH = 32, gap = 10;
+  const fullW = document.getElementById('chart').getBoundingClientRect().width || 960;
+  const innerW = fullW - margin.left - margin.right;
+  const totalH = rows.length * (rowH + gap) + margin.top + margin.bottom;
+
+  svg.attr('viewBox', `0 0 ${fullW} ${totalH}`);
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+  const xScale = d3.scaleLinear().domain([0,100]).range([0, innerW]);
+
+  [0,25,50,75,100].forEach(v => {
+    g.append('line')
+      .attr('x1', xScale(v)).attr('x2', xScale(v))
+      .attr('y1', 0).attr('y2', rows.length * (rowH + gap))
+      .attr('stroke', '#1e2230').attr('stroke-width', 0.5);
+    g.append('text')
+      .attr('x', xScale(v)).attr('y', rows.length * (rowH + gap) + 18)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', 10).attr('fill', '#3a3e4a')
+      .attr('font-family', "'DM Sans', sans-serif")
+      .text(v + '%');
+  });
+
+  rows.forEach((row, i) => {
+    const y = i * (rowH + gap);
+    let x = 0;
+
+    g.append('text')
+      .attr('x', -10).attr('y', y + rowH / 2)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'central')
+      .attr('font-size', 12).attr('fill', '#6a6865')
+      .attr('font-family', "'DM Sans', sans-serif")
+      .text(row.l);
+
+    g.append('text')
+      .attr('x', innerW + 10).attr('y', y + rowH / 2)
+      .attr('dominant-baseline', 'central')
+      .attr('font-size', 10).attr('fill', '#3a3e4a')
+      .attr('font-family', "'DM Sans', sans-serif")
+      .text('n=' + row.n.toLocaleString());
+
+    SEGS.forEach(seg => {
+      const pct = row[seg];
+      if (pct <= 0) return;
+      const w = xScale(pct);
+
+      g.append('rect')
+        .attr('x', x).attr('y', y)
+        .attr('width', w).attr('height', rowH)
+        .attr('fill', seg === 'emerg' ? 'url(#pat-emerg)' : seg === 'inp' ? 'url(#pat-inp)' : COLORS[seg])        .style('cursor', 'pointer')
+        .on('mousemove', function(event) {
+          tip.style.opacity = '1';
+          tip.style.left = (event.clientX + 14) + 'px';
+          tip.style.top  = (event.clientY - 40) + 'px';
+          const segCount = Math.round(pct / 100 * row.n);
+          tip.innerHTML = `<strong>${row.l}</strong><br>${LABELS[seg]}: <strong>${pct}%</strong><br><span style="color:#9a9890">${segCount.toLocaleString()} of ${row.n.toLocaleString()} patients</span>`;        })
+        .on('mouseleave', () => { tip.style.opacity = '0'; });
+
+      if (w > 26) {
+        g.append('text')
+          .attr('x', x + w / 2).attr('y', y + rowH / 2)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', 11).attr('font-weight', 500)
+          .attr('fill', 'rgba(255,255,255,0.8)')
+          .attr('font-family', "'DM Sans', sans-serif")
+          .attr('pointer-events', 'none')
+          .text(pct + '%');
+      }
+      x += w;
+    });
+  });
+}
+
+// ── Draw heatmap ───────────────────────────────────────────────────────────
+function drawHeatmap() {
+  document.getElementById('chart-title').textContent = 'Severe outcome rate by condition and age group';
+  document.getElementById('insight').textContent = 'Each cell shows the percentage of patients with that condition + age combination who were hospitalized or died. Darker red = more severe. Empty or very small cells (n<5) are shown in gray. The bottom-right corner — older patients with serious comorbidities — is where outcomes are worst.';
+
+  const svg = d3.select('#chart');
+  svg.selectAll('*').remove();
+
+  const conditions_list = ['No comorbidities', ...Object.keys(COMORBIDITY_CODES)];
+  const age_labels = ['0–17','18–34','35–49','50–64','65–74','75+'];
+
+  const fullW = document.getElementById('chart').getBoundingClientRect().width || 960;
+  const margin = { top:40, right:20, bottom:20, left:148 };
+  const cellW = Math.floor((fullW - margin.left - margin.right) / age_labels.length);
+  const cellH = 52;
+  const totalH = conditions_list.length * cellH + margin.top + margin.bottom;
+
+  svg.attr('viewBox', `0 0 ${fullW} ${totalH}`);
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Color scale — low severity = dark bg, high = red
+  const colorScale = d3.scaleSequential()
+    .domain([0, 80])
+    .interpolator(t => d3.interpolateRgb('#1a2030', '#b83a3a')(t));
+
+  // Column headers (age groups)
+  age_labels.forEach((al, j) => {
+    g.append('text')
+      .attr('x', j * cellW + cellW / 2)
+      .attr('y', -14)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', 11)
+      .attr('fill', '#6a6865')
+      .attr('font-family', "'DM Sans', sans-serif")
+      .text(al);
+  });
+
+  // Row labels + cells
+  conditions_list.forEach((cond, i) => {
+    // Row label
+    g.append('text')
+      .attr('x', -10)
+      .attr('y', i * cellH + cellH / 2)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'central')
+      .attr('font-size', 12)
+      .attr('fill', '#6a6865')
+      .attr('font-family', "'DM Sans', sans-serif")
+      .text(cond);
+
+    age_labels.forEach((al, j) => {
+      const d = HEATMAP_DATA.find(r => r.cond === cond && r.age === al);
+      const x = j * cellW;
+      const y = i * cellH;
+      const hasData = d && d.n >= 5 && d.severeRate !== null;
+      const fill = hasData ? colorScale(d.severeRate) : '#161920';
+
+      g.append('rect')
+        .attr('x', x + 2).attr('y', y + 2)
+        .attr('width', cellW - 4).attr('height', cellH - 4)
+        .attr('fill', fill)
+        .attr('rx', 4)
+        .style('cursor', hasData ? 'pointer' : 'default')
+        .on('mousemove', function(event) {
+          if (!hasData) return;
+          tip.style.opacity = '1';
+          tip.style.left = (event.clientX + 14) + 'px';
+          tip.style.top  = (event.clientY - 40) + 'px';
+          tip.innerHTML = `<strong>${cond}</strong> · ${al}<br>Severe outcome rate: <strong>${d.severeRate}%</strong><br><span style="color:#3a3e4a">n = ${d.n.toLocaleString()} patients</span>`;
+        })
+        .on('mouseleave', () => { tip.style.opacity = '0'; });
+
+      if (hasData) {
+        g.append('text')
+          .attr('x', x + cellW / 2)
+          .attr('y', i * cellH + cellH / 2 - 6)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', 14)
+          .attr('font-weight', 500)
+          .attr('fill', d.severeRate > 30 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)')
+          .attr('font-family', "'DM Sans', sans-serif")
+          .attr('pointer-events', 'none')
+          .text(d.severeRate + '%');
+
+        g.append('text')
+          .attr('x', x + cellW / 2)
+          .attr('y', i * cellH + cellH / 2 + 12)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', 9)
+          .attr('fill', 'rgba(255,255,255,0.3)')
+          .attr('font-family', "'DM Sans', sans-serif")
+          .attr('pointer-events', 'none')
+          .text('n=' + d.n);
+      } else {
+        g.append('text')
+          .attr('x', x + cellW / 2)
+          .attr('y', i * cellH + cellH / 2)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', 10)
+          .attr('fill', '#2a2e3a')
+          .attr('font-family', "'DM Sans', sans-serif")
+          .attr('pointer-events', 'none')
+          .text(d && d.n > 0 ? 'n<5' : '—');
+      }
+    });
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function draw(viewKey) {
+  if (viewKey === 'heatmap') {
+    document.getElementById('bar-legend').style.display = 'none';
+    document.getElementById('heat-legend').style.display = 'block';
+    drawHeatmap();
+  } else {
+    document.getElementById('bar-legend').style.display = 'flex';
+    document.getElementById('heat-legend').style.display = 'none';
+    drawBars(viewKey);
+  }
+}
+
+function show(viewKey, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  draw(viewKey);
+}
+
+window.addEventListener('resize', () => {
+  const activeKey = document.querySelector('.tab.active')
+    .getAttribute('onclick').match(/'(\w+)'/)[1];
+  draw(activeKey);
+});
+</script>
+</body>
+</html>
