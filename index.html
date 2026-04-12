@@ -577,7 +577,7 @@ function drawHeatmap() {
   // Color scale — low severity = dark bg, high = red
   const colorScale = d3.scaleSequential()
     .domain([0, 80])
-    .interpolator(t => d3.interpolateRgb('#1a2030', '#b83a3a')(t));
+    .interpolator(d3.interpolateRgbBasis(['#1a2030', '#3a5a7a', '#7a3a5a', '#b83a3a']));
 
   // Column headers (age groups)
   age_labels.forEach((al, j) => {
