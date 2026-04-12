@@ -434,7 +434,7 @@ Promise.all([
 
   // Build gradient for heatmap legend
   const gradEl = document.getElementById('heat-gradient');
-  gradEl.style.background = 'linear-gradient(to right, #161920, #5a8fa8, #b83a3a, #5c1a1a)';
+  gradEl.style.background = 'linear-gradient(to right, #80ccec, #9090b0, #a06080, #b83a3a, #7a1a1a)';
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -577,7 +577,7 @@ function drawHeatmap() {
   // Color scale — low severity = dark bg, high = red
   const colorScale = d3.scaleSequential()
     .domain([0, 80])
-    .interpolator(d3.interpolateRgbBasis(['#cce8f4', '#8fbccc', '#a06080', '#b83a3a', '#7a1a1a']));
+    .interpolator(d3.interpolateRgbBasis(['#80ccec', '#9090b0', '#a06080', '#b83a3a', '#7a1a1a']));
 
   // Column headers (age groups)
   age_labels.forEach((al, j) => {
