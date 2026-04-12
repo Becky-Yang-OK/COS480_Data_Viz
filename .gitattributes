@@ -1,3 +1,4 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
 patients.csv !text !filter !merge !diff
 conditions.csv !text !filter !merge !diff
 encounters.csv !text !filter !merge !diff
