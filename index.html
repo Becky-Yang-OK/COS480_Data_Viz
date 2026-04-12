@@ -174,7 +174,15 @@
   }
 
   .tooltip strong { color: #6aabca; } /* was #5a8fa8 (3.6:1 on #1a1d26) → now 4.8:1 ✅ */
-
+  .section-text {
+    font-size: 14px;
+    color: #a8a5a0;
+    line-height: 1.8;
+    max-width: 960px;
+    margin: 0 auto 40px;
+    border-left: 3px solid #6aabca;
+    padding-left: 16px;
+  }
   .insight-box {
     max-width: 960px;
     margin: 28px auto 0;
@@ -202,8 +210,7 @@
   <header>
     <div class="eyebrow">Data Visualization · Synthea Synthetic Patient Data</div>
     <h1>What factors lead to<br>severe COVID-19 outcomes?</h1>
-    <p class="subtitle">Analysis of synthetic patients diagnosed with COVID-19, examining how pre-existing conditions, age, and comorbidity burden shift outcomes from mild illness toward hospitalization and death.</p>
-    <div class="stat-row">
+    <p class="subtitle">Not all COVID-19 patients face the same risk. Using synthetic patient records modeled on real Massachusetts health data, this analysis examines what separated patients who recovered at home from those who were hospitalized or died. The answer is not random — it follows a predictable pattern tied to age, pre-existing conditions, and how those factors compound each other.</p>    <div class="stat-row">
       <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">COVID patients</div></div>
       <div class="stat"><div class="stat-num" id="stat-fatal">—</div><div class="stat-label">Fatalities</div></div>
       <div class="stat"><div class="stat-num" id="stat-hosp">—</div><div class="stat-label">Hospitalized</div></div>
@@ -211,8 +218,9 @@
     </div>
   </header>
 
-  <div class="tabs">
-    <button class="tab active" onclick="show('factors', this)">By Risk Factor</button>
+
+
+  <div class="tabs">    <button class="tab active" onclick="show('factors', this)">By Risk Factor</button>
     <button class="tab" onclick="show('age', this)">By Age Group</button>
     <button class="tab" onclick="show('count', this)">By Comorbidity Count</button>
     <button class="tab" onclick="show('heatmap', this)">Condition × Age Heatmap</button>
@@ -236,12 +244,23 @@
     <div class="chart-title" id="chart-title"></div>
     <svg id="chart"></svg>
     <div class="insight-box" id="insight"></div>
-  </div>
+<div id="section-narrative" style="max-width:960px;margin:24px auto 0;font-size:14px;color:#a8a5a0;line-height:1.8;border-left:3px solid #6aabca;padding-left:16px;min-height:1em;"></div>  </div>
 </div>
 
 <div class="tooltip" id="tooltip"></div>
 
+<div style="max-width:960px;margin:48px auto 0;padding:24px;background:#161920;border:1px solid #1e2230;border-radius:10px;">
+  <div style="font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#6aabca;margin-bottom:12px;">Conclusion</div>
+  <p style="font-size:14px;color:#a8a5a0;line-height:1.8;margin-bottom:12px;">Taken together, these four views tell one story. COVID severity was largely predictable from a patient's existing health profile — specifically their age, their respiratory and cardiovascular conditions, and how many conditions they carried simultaneously.</p>
+  <p style="font-size:14px;color:#a8a5a0;line-height:1.8;">For future pandemic preparedness, this points toward one clear priority: identify and protect patients with COPD, coronary disease, or diabetes above age 65 before the next wave arrives. The risk was not random. It was written in the patient's chart before COVID arrived.</p>
+</div>
 <script>
+  const NARRATIVES = {
+  factors: 'The first question is which conditions matter most. Not all comorbidities carry equal weight — asthma and obesity raise risk modestly, while COPD and coronary disease shift outcomes dramatically. This suggests COVID exploited existing vulnerabilities in the cardiovascular and respiratory systems specifically.',
+  age: 'Age tells an even starker story. Across every condition group, getting older meant getting sicker from COVID. A 75-year-old with no diagnosed conditions still faced higher mortality than a 35-year-old with diabetes, suggesting age carries its own independent risk beyond any single diagnosis.',
+  count: 'If individual conditions raise risk, multiple conditions stack it. Each additional diagnosis shifted outcomes further toward severity. A patient with four or more conditions faced a 20% fatality rate — compared to 1% for patients with none. This is the clearest argument for treating high-risk patients as a distinct priority group.',
+  heatmap: 'The heatmap brings age and condition together in one view. The pattern is immediately readable — the bottom-right corner, where older patients with serious comorbidities live, is the darkest. The top-left, younger patients with no comorbidities, barely registers.',
+};
 const COLORS = { mild:'#3d7ab5', emerg:'#c87d2f', inp:'#b83a3a', fatal:'#5c1a1a' };
 const LABELS = { mild:'Mild / Outpatient', emerg:'Emergency', inp:'Inpatient', fatal:'Fatal' };
 const SEGS = ['mild','emerg','inp','fatal'];
@@ -439,8 +458,9 @@ Promise.all([
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  draw('factors');
-
+draw('factors');
+  const el = document.getElementById('section-narrative');
+  if (el) el.textContent = NARRATIVES['factors'];
 }).catch(err => {
   document.getElementById('loading').innerHTML =
     `<div style="color:#e05555;text-align:center;line-height:2">
@@ -677,10 +697,13 @@ function draw(viewKey) {
   }
 }
 
+
 function show(viewKey, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   draw(viewKey);
+  const el = document.getElementById('section-narrative');
+  if (el) el.textContent = NARRATIVES[viewKey] || '';
 }
 
 window.addEventListener('resize', () => {
