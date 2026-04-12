@@ -270,6 +270,7 @@ const SEVERITY_RANK = {
 
 let VIEWS = {};
 let HEATMAP_DATA = [];
+let totalCovid = 0;
 const tip = document.getElementById('tooltip');
 
 
@@ -407,7 +408,7 @@ Promise.all([
   });
 
   // Summary stats
-  const totalCovid = allCovid.length;
+  totalCovid = allCovid.length;
   const totalFatal = died.size;
   const totalHosp  = allCovid.filter(id => (patientSeverity.get(id) ?? 0) >= 4).length;
   document.getElementById('stat-total').textContent = totalCovid.toLocaleString();
@@ -624,6 +625,7 @@ function drawHeatmap() {
           tip.innerHTML = `<strong style="color:#e8e6e0">${cond}</strong> · <span style="color:#e8e6e0">${al}</span><br>Severe Outcome Rate: <strong style="color:#6aabca">${d.severeRate}%</strong><br><span style="color:#a8a5a0">${d.n.toLocaleString()} of ${totalCovid.toLocaleString()} patients</span>`;
         })
         .on('mouseleave', () => { tip.style.opacity = '0'; });
+        
       if (hasData) {
         g.append('text')
           .attr('x', x + cellW / 2)
