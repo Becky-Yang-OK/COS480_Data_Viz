@@ -577,7 +577,7 @@ function drawHeatmap() {
   // Color scale — low severity = dark bg, high = red
   const colorScale = d3.scaleSequential()
     .domain([0, 80])
-    .interpolator(d3.interpolateRgbBasis(['#1a2030', '#3a5a7a', '#7a3a5a', '#b83a3a']));
+    .interpolator(d3.interpolateRgbBasis(['#cce8f4', '#8fbccc', '#a06080', '#b83a3a', '#7a1a1a']));
 
   // Column headers (age groups)
   age_labels.forEach((al, j) => {
@@ -633,7 +633,7 @@ function drawHeatmap() {
           .attr('dominant-baseline', 'central')
           .attr('font-size', 14)
           .attr('font-weight', 500)
-          .attr('fill', d.severeRate > 30 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.7)')
+          .attr('fill', d.severeRate > 30 ? 'rgba(255,255,255,0.9)' : '#1a2030')
           .attr('font-family', "'DM Sans', sans-serif")
           .attr('pointer-events', 'none')
           .text(d.severeRate + '%');
@@ -644,7 +644,7 @@ function drawHeatmap() {
           .attr('text-anchor', 'middle')
           .attr('dominant-baseline', 'central')
           .attr('font-size', 9)
-          .attr('fill', 'rgba(255,255,255,0.5)') /* was 0.3, boosted for legibility */
+          .attr('fill', d.severeRate > 30 ? 'rgba(255,255,255,0.5)' : '#2a3a4a')
           .attr('font-family', "'DM Sans', sans-serif")
           .attr('pointer-events', 'none')
           .text('n=' + d.n);
