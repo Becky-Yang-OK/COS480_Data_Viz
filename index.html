@@ -278,7 +278,7 @@ Promise.all([
   d3.csv('conditions.csv'),
   d3.csv('encounters.csv'),
   d3.csv('observations.csv')
-])
+]).then(([patients, conditions, encounters, observations]) => {
 
   const covidIds = new Set(
     conditions
