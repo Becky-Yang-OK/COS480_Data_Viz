@@ -621,8 +621,9 @@ function drawHeatmap() {
           tip.style.opacity = '1';
           tip.style.left = (event.clientX + 14) + 'px';
           tip.style.top  = (event.clientY - 40) + 'px';
-          tip.innerHTML = `<strong style="color:#e8e6e0">${cond}</strong> · <span style="color:#e8e6e0">${al}</span><br>Severe Outcome Rate: <strong style="color:#6aabca">${d.severeRate}%</strong><br><span style="color:#a8a5a0">${d.n.toLocaleString()} of ${totalCovid.toLocaleString()} patients</span>`;        .on('mouseleave', () => { tip.style.opacity = '0'; });
-
+          tip.innerHTML = `<strong style="color:#e8e6e0">${cond}</strong> · <span style="color:#e8e6e0">${al}</span><br>Severe Outcome Rate: <strong style="color:#6aabca">${d.severeRate}%</strong><br><span style="color:#a8a5a0">${d.n.toLocaleString()} of ${totalCovid.toLocaleString()} patients</span>`;
+        })
+        .on('mouseleave', () => { tip.style.opacity = '0'; });
       if (hasData) {
         g.append('text')
           .attr('x', x + cellW / 2)
