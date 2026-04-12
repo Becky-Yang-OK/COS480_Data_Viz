@@ -197,6 +197,73 @@
   }
 
   @media (max-width: 600px) { body { padding: 32px 16px; } }
+  .insight-toggle {
+  max-width: 960px;
+  margin: 28px auto 0;
+  border: 1px solid #1e2230;
+  border-left: 3px solid #6aabca;
+  border-radius: 0 8px 8px 0;
+  background: #161920;
+  overflow: hidden;
+}
+
+.insight-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6aabca;
+  gap: 10px;
+}
+
+.insight-toggle-btn:hover { background: #1e2230; }
+
+.insight-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6aabca;
+  flex-shrink: 0;
+}
+
+.insight-chevron {
+  font-size: 10px;
+  color: #6aabca;
+  transition: transform .25s ease;
+  flex-shrink: 0;
+}
+
+.insight-chevron.open { transform: rotate(180deg); }
+
+.insight-body {
+  font-size: 13px;
+  color: #a8a5a0;
+  line-height: 1.7;
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s ease, padding .3s ease;
+}
+
+.insight-body.open {
+  max-height: 200px;
+  padding: 0 18px 14px;
+}
 </style>
 </head>
 <body>
@@ -210,8 +277,7 @@
   <header>
     <div class="eyebrow">Data Visualization · Synthea Synthetic Patient Data</div>
     <h1>What factors lead to<br>severe COVID-19 outcomes?</h1>
-    <p class="subtitle">Not all COVID-19 patients face the same risk. Using synthetic patient records modeled on real Massachusetts health data, this analysis examines what separated patients who recovered at home from those who were hospitalized or died. The answer is not random — it follows a predictable pattern tied to age, pre-existing conditions, and how those factors compound each other.</p>    <div class="stat-row">
-      <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">COVID patients</div></div>
+    <p class="subtitle">Not all COVID-19 patients faced the same risk or encountered the same problems, and those differences were not random. Using synthetic patient records modeled on real Massachusetts health data, this analysis develops a four-part argument: first, that certain underlying conditions carry far greater weight than others; second, that age amplifies risk across all conditions; third, that comorbidities interact to compound risk in a non-linear way; and finally, that age and health status together predict outcomes with striking precision. Taken together, these patterns reveal a disease whose severity was often foreshadowed by the patient’s charts long before infection occurred.</p>      <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">COVID patients</div></div>
       <div class="stat"><div class="stat-num" id="stat-fatal">—</div><div class="stat-label">Fatalities</div></div>
       <div class="stat"><div class="stat-num" id="stat-hosp">—</div><div class="stat-label">Hospitalized</div></div>
       <div class="stat"><div class="stat-num" id="stat-age">21×</div><div class="stat-label">Higher mortality, 75+ vs under 50</div></div>
@@ -220,10 +286,10 @@
 
 
 
-  <div class="tabs">    <button class="tab active" onclick="show('factors', this)">By Risk Factor</button>
-    <button class="tab" onclick="show('age', this)">By Age Group</button>
-    <button class="tab" onclick="show('count', this)">By Comorbidity Count</button>
-    <button class="tab" onclick="show('heatmap', this)">Condition × Age Heatmap</button>
+  <div class="tabs">    <button class="tab active" onclick="show('factors', this)">1 · By Risk Factor</button>
+    <button class="tab" onclick="show('age', this)">2 · By Age Group</button>
+    <button class="tab" onclick="show('count', this)">3 · By Comorbidity Count</button>
+    <button class="tab" onclick="show('heatmap', this)">4 · Condition × Age Heatmap</button>
   </div>
 
   <div class="chart-container">
@@ -243,7 +309,16 @@
     </div>
     <div class="chart-title" id="chart-title"></div>
     <svg id="chart"></svg>
-    <div class="insight-box" id="insight"></div>
+    <div class="insight-toggle" id="insight-toggle">
+      <button class="insight-toggle-btn" onclick="toggleInsight()" aria-expanded="false" id="insight-btn">
+        <span class="insight-toggle-left">
+          <span class="insight-dot"></span>
+          Data Insight · Read More
+        </span>
+        <span class="insight-chevron" id="insight-chevron">▼</span>
+      </button>
+      <div class="insight-body" id="insight"></div>
+    </div>
 <div id="section-narrative" style="max-width:960px;margin:24px auto 0;font-size:14px;color:#a8a5a0;line-height:1.8;border-left:3px solid #6aabca;padding-left:16px;min-height:1em;"></div>  </div>
 </div>
 
@@ -251,15 +326,15 @@
 
 <div style="max-width:960px;margin:48px auto 0;padding:24px;background:#161920;border:1px solid #1e2230;border-radius:10px;">
   <div style="font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#6aabca;margin-bottom:12px;">Conclusion</div>
-  <p style="font-size:14px;color:#a8a5a0;line-height:1.8;margin-bottom:12px;">Taken together, these four views tell one story. COVID severity was largely predictable from a patient's existing health profile — specifically their age, their respiratory and cardiovascular conditions, and how many conditions they carried simultaneously.</p>
-  <p style="font-size:14px;color:#a8a5a0;line-height:1.8;">For future pandemic preparedness, this points toward one clear priority: identify and protect patients with COPD, coronary disease, or diabetes above age 65 before the next wave arrives. The risk was not random. It was written in the patient's chart before COVID arrived.</p>
+  <p style="font-size:14px;color:#a8a5a0;line-height:1.8;margin-bottom:12px;">This analysis built its argument in four steps. First, we established that comorbidities are not equal in their impact—conditions such as COPD and coronary disease strongly drive severe outcomes, while asthma has a comparatively modest effect. Second, we showed that age acts as an independent and dominant amplifier of risk, with mortality rising sharply after age 65 regardless of underlying diagnosis. Third, we demonstrated that comorbidity burden compounds risk rather than adding to it linearly: patients with four or more conditions face fatality rates roughly twenty times higher than those with none. Finally, the combined age–comorbidity view unified these findings, revealing a concentrated region of extreme risk among older patients with multiple serious conditions.</p>
+<p style="font-size:14px;color:#a8a5a0;line-height:1.8;">Taken together, these results show a consistent and compounding structure of vulnerability across the patient population. COVID-19 severity was not evenly distributed or randomly determined: it followed a clear, interpretable pattern grounded in pre-existing health status. The most important implication is therefore not retrospective but forward-looking: the patients most at risk were largely identifiable in advance through their medical profiles. In future outbreaks, prioritizing individuals with high-risk conditions—particularly older adults with cardiovascular or respiratory disease—represents one of the most direct and actionable uses of clinical data for preventing severe outcomes.</p>
 </div>
 <script>
   const NARRATIVES = {
-  factors: 'The first question is which conditions matter most. Not all comorbidities carry equal weight — asthma and obesity raise risk modestly, while COPD and coronary disease shift outcomes dramatically. This suggests COVID exploited existing vulnerabilities in the cardiovascular and respiratory systems specifically.',
-  age: 'Age tells an even starker story. Across every condition group, getting older meant getting sicker from COVID. A 75-year-old with no diagnosed conditions still faced higher mortality than a 35-year-old with diabetes, suggesting age carries its own independent risk beyond any single diagnosis.',
-  count: 'If individual conditions raise risk, multiple conditions stack it. Each additional diagnosis shifted outcomes further toward severity. A patient with four or more conditions faced a 20% fatality rate — compared to 1% for patients with none. This is the clearest argument for treating high-risk patients as a distinct priority group.',
-  heatmap: 'The heatmap brings age and condition together in one view. The pattern is immediately readable — the bottom-right corner, where older patients with serious comorbidities live, is the darkest. The top-left, younger patients with no comorbidities, barely registers.',
+  factors: 'We begin by asking which conditions matter most. Not all comorbidities carry equal weight — asthma and obesity raise risk modestly, while COPD and coronary disease shift outcomes dramatically toward hospitalization and death. This suggests COVID exploited existing vulnerabilities in the cardiovascular and respiratory systems specifically, rather than weakening immunity in general. But knowing which conditions are dangerous only raises the next question: does age change the equation?',
+  age: 'The answer is yes — decisively. Age turns out to be the single strongest predictor of severity, cutting across every condition group. A 75-year-old with no diagnosed conditions still faced higher mortality than a 35-year-old with diabetes, suggesting age carries its own independent biological risk beyond any single diagnosis. The shift from the 50–64 to the 65–74 bracket is particularly sharp — a warning line that the data makes visible. But age and individual conditions are still only part of the picture. What happens when a patient carries several conditions at once?',
+  count: 'Risk does not add — it multiplies. Each additional diagnosis shifted outcomes further toward severity in a pattern that is almost linear in its brutality: patients with four or more conditions faced a fatality rate roughly twenty times higher than those with none. This is the clearest argument in the entire dataset for treating high-comorbidity patients as a distinct clinical priority group, not simply as "sicker than average." Having established that both specific conditions and sheer condition count drive severity, we can now ask what happens when we combine both lenses — condition type and age — in a single view.',
+  heatmap: 'Bringing age and condition together reveals the full shape of the risk landscape. The pattern is immediately readable: the bottom-right corner of this grid, where older patients with serious comorbidities live, is the darkest. The top-left, younger patients with no comorbidities, barely registers. The stark division brings about a clear statement of who is most at risk, and who faces the sharpest face of COVID-19. Taken together, all four views converge on one conclusion: COVID severity was largely predictable from information already sitting in a patient\'s medical record.',
 };
 const COLORS = { mild:'#3d7ab5', emerg:'#c87d2f', inp:'#b83a3a', fatal:'#5c1a1a' };
 const LABELS = { mild:'Mild / Outpatient', emerg:'Emergency', inp:'Inpatient', fatal:'Fatal' };
@@ -437,7 +512,7 @@ Promise.all([
   VIEWS = {
     factors: {
       title: 'Severity breakdown by risk factor',
-      insight: 'COPD and coronary heart disease are the deadliest comorbidities — patients with COPD had the highest inpatient and fatality rates. Asthma, despite being respiratory, showed mostly mild outcomes. Patients with No Comorbidities had the lowest fatality rate.',
+      insight: 'COPD and coronary heart disease are the deadliest comorbidities — patients with COPD had the highest inpatient and fatality rates. Asthma, despite being respiratory, showed mostly mild outcomes. Patients with no comorbidities had the lowest fatality rate.',
       rows: factorRows,
     },
     age: {
@@ -711,6 +786,16 @@ window.addEventListener('resize', () => {
     .getAttribute('onclick').match(/'(\w+)'/)[1];
   draw(activeKey);
 });
+
+function toggleInsight() {
+  const body = document.getElementById('insight');
+  const chevron = document.getElementById('insight-chevron');
+  const btn = document.getElementById('insight-btn');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.classList.toggle('open', !isOpen);
+  btn.setAttribute('aria-expanded', String(!isOpen));
+}
 </script>
 </body>
 </html>
